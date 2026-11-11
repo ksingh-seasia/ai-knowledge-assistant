@@ -1,9 +1,7 @@
 import { ChangeEvent, useState } from "react";
+import ContactUs from "./ContactUs";
 
 const API_URL = "http://localhost:8000";
-
-const RATE_LIMIT_MESSAGE =
-  "The selected model is temporarily rate-limited. Please retry shortly or select another model.";
 
 type Source = {
   content: string;
@@ -11,15 +9,16 @@ type Source = {
   page?: number | null;
 };
 
+type View = "home" | "contact";
+
 export default function App() {
+  const [view, setView] = useState<View>("home");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState("openrouter/free");
-  const [apiKey, setApiKey] = useState("");
 
   async function askQuestion() {
     if (!question.trim()) return;
@@ -31,27 +30,13 @@ export default function App() {
       const response = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          model: selectedModel,
-          api_key: apiKey,
-        }),
+        body: JSON.stringify({ question }),
       });
 
-      if (response.status === 429) {
-        setMessage(RATE_LIMIT_MESSAGE);
-        return;
-      }
-
-      let data: any = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.detail ?? "Request failed");
+        throw new Error(data.detail ?? "Request failed");
       }
 
       setAnswer(data.answer);
@@ -95,9 +80,23 @@ export default function App() {
     }
   }
 
+  if (view === "contact") {
+    return <ContactUs onBack={() => setView("home")} />;
+  }
+
   return (
     <main className="page">
       <section className="container">
+        <nav className="top-nav">
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => setView("contact")}
+          >
+            Contact Us
+          </button>
+        </nav>
+
         <header>
           <p className="eyebrow">RAG • LANGGRAPH • PGVECTOR</p>
           <h1>AI Knowledge Assistant</h1>
@@ -119,27 +118,6 @@ export default function App() {
 
         <section className="card">
           <h2>2. Ask a question</h2>
-
-          <label htmlFor="model-select">Model</label>
-          <select
-            id="model-select"
-            value={selectedModel}
-            onChange={(event) => setSelectedModel(event.target.value)}
-          >
-            <option value="openrouter/free">openrouter/free</option>
-            <option value="google/gemma-4-26b-a4b-it:free">
-              Gemma 4 26B (Free)
-            </option>
-          </select>
-
-          <label htmlFor="api-key-input">API Key (optional)</label>
-          <input
-            id="api-key-input"
-            type="password"
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
-            placeholder="Optional API key"
-          />
 
           <textarea
             value={question}
